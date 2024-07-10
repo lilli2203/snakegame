@@ -12,11 +12,16 @@ GRID_HEIGHT = HEIGHT // GRID_SIZE
 WHITE = (255, 255, 255)
 GREEN = (0, 255, 0)
 RED = (255, 0, 0)
+BLUE = (0, 0, 255)
+YELLOW = (255, 255, 0)
 BLACK = (0, 0, 0)
+GREY = (100, 100, 100)
 
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 clock = pygame.time.Clock()
 font = pygame.font.SysFont("Arial", 24)
+pygame.mixer.music.load('background_music.mp3')
+pygame.mixer.music.play(-1)
 
 def init_snake():
     return [(GRID_WIDTH // 2, GRID_HEIGHT // 2)]
@@ -43,6 +48,17 @@ def welcome_screen():
     screen.blit(difficulty_text, (WIDTH // 2 - difficulty_text.get_width() // 2, HEIGHT // 2 + 40))
     pygame.display.flip()
 
+def back_screen():
+    screen.fill(BLACK)
+    title_text = font.render("Snake Game", True, WHITE)
+    instructions_text = font.render("Press Enter to Start", True, WHITE)
+    difficulty_text = font.render("Select Difficulty: 1 (Easy) 2 (Medium) 3 (Hard)", True, WHITE)
+    screen.blit(title_text, (WIDTH // 2 - title_text.get_width() // 2, HEIGHT // 3))
+    screen.blit(instructions_text, (WIDTH // 2 - instructions_text.get_width() // 2, HEIGHT // 2))
+    screen.blit(difficulty_text, (WIDTH // 2 - difficulty_text.get_width() // 2, HEIGHT // 2 + 40))
+    pygame.display.flip()
+
+
 def pause_game():
     paused = True
     while paused:
@@ -58,6 +74,24 @@ direction = (0, 0)
 food = random_food()
 score = 0
 speed = 10
+obstacles = [(random.randint(0, GRID_WIDTH - 1), random.randint(0, GRID_HEIGHT - 1)) for _ in range(10)]
+food_types = ["normal", "super", "slow"]
+current_food_type = "normal"
+
+screen.fill(BLACK)
+    for segment in snake:
+        pygame.draw.rect(screen, GREEN, pygame.Rect(segment[0] * GRID_SIZE, segment[1] * GRID_SIZE, GRID_SIZE, GRID_SIZE))
+    for obstacle in obstacles:
+        pygame.draw.rect(screen, GREY, pygame.Rect(obstacle[0] * GRID_SIZE, obstacle[1] * GRID_SIZE, GRID_SIZE, GRID_SIZE))
+    if current_food_type == "normal":
+        pygame.draw.rect(screen, RED, pygame.Rect(food[0] * GRID_SIZE, food[1] * GRID_SIZE, GRID_SIZE, GRID_SIZE))
+    elif current_food_type == "super":
+        pygame.draw.rect(screen, BLUE, pygame.Rect(food[0] * GRID_SIZE, food[1] * GRID_SIZE, GRID_SIZE, GRID_SIZE))
+    elif current_food_type == "slow":
+        pygame.draw.rect(screen, YELLOW, pygame.Rect(food[0] * GRID_SIZE, food[1] * GRID_SIZE, GRID_SIZE, GRID_SIZE))
+    score_text = font.render("Score: " + str(score), True, WHITE)
+    screen.blit(score_text, (5, 5))
+    pygame.display.flip()
 
 welcome_screen()
 waiting = True
@@ -90,33 +124,37 @@ while True:
                 direction = (1, 0)
             elif event.key == pygame.K_p:
                 pause_game()
-            if event.key == pygame.K_UP and direction != (0, 1):
-                direction = (0, -1)
-            elif event.key == pygame.K_DOWN and direction != (0, -1):
-                direction = (0, 1)
-            elif event.key == pygame.K_LEFT and direction != (1, 0):
-                direction = (-1, 0)
-            elif event.key == pygame.K_RIGHT and direction != (-1, 0):
-                direction = (1, 0)
-            elif event.key == pygame.K_p:
-                pause_game()
 
     if direction != (0, 0):
         new_head = (snake[0][0] + direction[0], snake[0][1] + direction[1])
-        if new_head in snake or not (0 <= new_head[0] < GRID_WIDTH) or not (0 <= new_head[1] < GRID_HEIGHT):
+        if new_head in snake or new_head in obstacles or not (0 <= new_head[0] < GRID_WIDTH) or not (0 <= new_head[1] < GRID_HEIGHT):
             game_over()
         snake.insert(0, new_head)
         if new_head == food:
             food = random_food()
-            score += 1
-            speed += 1
+            current_food_type = random.choice(food_types)
+            if current_food_type == "normal":
+                score += 1
+            elif current_food_type == "super":
+                score += 3
+                speed += 3
+            elif current_food_type == "slow":
+                score += 1
+                speed -= 2
         else:
             snake.pop()
 
     screen.fill(BLACK)
     for segment in snake:
         pygame.draw.rect(screen, GREEN, pygame.Rect(segment[0] * GRID_SIZE, segment[1] * GRID_SIZE, GRID_SIZE, GRID_SIZE))
-    pygame.draw.rect(screen, RED, pygame.Rect(food[0] * GRID_SIZE, food[1] * GRID_SIZE, GRID_SIZE, GRID_SIZE))
+    for obstacle in obstacles:
+        pygame.draw.rect(screen, GREY, pygame.Rect(obstacle[0] * GRID_SIZE, obstacle[1] * GRID_SIZE, GRID_SIZE, GRID_SIZE))
+    if current_food_type == "normal":
+        pygame.draw.rect(screen, RED, pygame.Rect(food[0] * GRID_SIZE, food[1] * GRID_SIZE, GRID_SIZE, GRID_SIZE))
+    elif current_food_type == "super":
+        pygame.draw.rect(screen, BLUE, pygame.Rect(food[0] * GRID_SIZE, food[1] * GRID_SIZE, GRID_SIZE, GRID_SIZE))
+    elif current_food_type == "slow":
+        pygame.draw.rect(screen, YELLOW, pygame.Rect(food[0] * GRID_SIZE, food[1] * GRID_SIZE, GRID_SIZE, GRID_SIZE))
     score_text = font.render("Score: " + str(score), True, WHITE)
     screen.blit(score_text, (5, 5))
     pygame.display.flip()
