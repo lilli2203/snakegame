@@ -20,8 +20,11 @@ GREY = (100, 100, 100)
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 clock = pygame.time.Clock()
 font = pygame.font.SysFont("Arial", 24)
+
 pygame.mixer.music.load('background_music.mp3')
 pygame.mixer.music.play(-1)
+eat_sound = pygame.mixer.Sound('eat_sound.wav')
+game_over_sound = pygame.mixer.Sound('game_over_sound.wav')
 
 def init_snake():
     return [(GRID_WIDTH // 2, GRID_HEIGHT // 2)]
@@ -30,11 +33,13 @@ def random_food():
     return (random.randint(0, GRID_WIDTH - 1), random.randint(0, GRID_HEIGHT - 1))
 
 def game_over():
+    pygame.mixer.music.stop()
+    game_over_sound.play()
     screen.fill(BLACK)
     game_over_text = font.render("Game Over! Score: " + str(score), True, WHITE)
     screen.blit(game_over_text, (WIDTH // 2 - game_over_text.get_width() // 2, HEIGHT // 2 - game_over_text.get_height() // 2))
     pygame.display.flip()
-    pygame.time.wait(2000)
+    pygame.time.wait(3000)
     pygame.quit()
     sys.exit()
 
@@ -47,17 +52,6 @@ def welcome_screen():
     screen.blit(instructions_text, (WIDTH // 2 - instructions_text.get_width() // 2, HEIGHT // 2))
     screen.blit(difficulty_text, (WIDTH // 2 - difficulty_text.get_width() // 2, HEIGHT // 2 + 40))
     pygame.display.flip()
-
-def back_screen():
-    screen.fill(BLACK)
-    title_text = font.render("Snake Game", True, WHITE)
-    instructions_text = font.render("Press Enter to Start", True, WHITE)
-    difficulty_text = font.render("Select Difficulty: 1 (Easy) 2 (Medium) 3 (Hard)", True, WHITE)
-    screen.blit(title_text, (WIDTH // 2 - title_text.get_width() // 2, HEIGHT // 3))
-    screen.blit(instructions_text, (WIDTH // 2 - instructions_text.get_width() // 2, HEIGHT // 2))
-    screen.blit(difficulty_text, (WIDTH // 2 - difficulty_text.get_width() // 2, HEIGHT // 2 + 40))
-    pygame.display.flip()
-
 
 def pause_game():
     paused = True
@@ -74,24 +68,10 @@ direction = (0, 0)
 food = random_food()
 score = 0
 speed = 10
+level = 1
 obstacles = [(random.randint(0, GRID_WIDTH - 1), random.randint(0, GRID_HEIGHT - 1)) for _ in range(10)]
 food_types = ["normal", "super", "slow"]
 current_food_type = "normal"
-
-screen.fill(BLACK)
-    for segment in snake:
-        pygame.draw.rect(screen, GREEN, pygame.Rect(segment[0] * GRID_SIZE, segment[1] * GRID_SIZE, GRID_SIZE, GRID_SIZE))
-    for obstacle in obstacles:
-        pygame.draw.rect(screen, GREY, pygame.Rect(obstacle[0] * GRID_SIZE, obstacle[1] * GRID_SIZE, GRID_SIZE, GRID_SIZE))
-    if current_food_type == "normal":
-        pygame.draw.rect(screen, RED, pygame.Rect(food[0] * GRID_SIZE, food[1] * GRID_SIZE, GRID_SIZE, GRID_SIZE))
-    elif current_food_type == "super":
-        pygame.draw.rect(screen, BLUE, pygame.Rect(food[0] * GRID_SIZE, food[1] * GRID_SIZE, GRID_SIZE, GRID_SIZE))
-    elif current_food_type == "slow":
-        pygame.draw.rect(screen, YELLOW, pygame.Rect(food[0] * GRID_SIZE, food[1] * GRID_SIZE, GRID_SIZE, GRID_SIZE))
-    score_text = font.render("Score: " + str(score), True, WHITE)
-    screen.blit(score_text, (5, 5))
-    pygame.display.flip()
 
 welcome_screen()
 waiting = True
@@ -131,6 +111,7 @@ while True:
             game_over()
         snake.insert(0, new_head)
         if new_head == food:
+            eat_sound.play()
             food = random_food()
             current_food_type = random.choice(food_types)
             if current_food_type == "normal":
@@ -141,6 +122,11 @@ while True:
             elif current_food_type == "slow":
                 score += 1
                 speed -= 2
+            # Level up every 10 points
+            if score % 10 == 0:
+                level += 1
+                speed += 2
+                obstacles.append((random.randint(0, GRID_WIDTH - 1), random.randint(0, GRID_HEIGHT - 1)))
         else:
             snake.pop()
 
@@ -156,7 +142,9 @@ while True:
     elif current_food_type == "slow":
         pygame.draw.rect(screen, YELLOW, pygame.Rect(food[0] * GRID_SIZE, food[1] * GRID_SIZE, GRID_SIZE, GRID_SIZE))
     score_text = font.render("Score: " + str(score), True, WHITE)
+    level_text = font.render("Level: " + str(level), True, WHITE)
     screen.blit(score_text, (5, 5))
+    screen.blit(level_text, (5, 30))
     pygame.display.flip()
 
     clock.tick(speed)
