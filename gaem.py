@@ -52,9 +52,11 @@ def welcome_screen():
     title_text = font.render("Snake Game", True, WHITE)
     instructions_text = font.render("Press Enter to Start", True, WHITE)
     difficulty_text = font.render("Select Difficulty: 1 (Easy) 2 (Medium) 3 (Hard)", True, WHITE)
+    mode_text = font.render("Select Mode: 1 (Classic) 2 (Timed) 3 (Survival)", True, WHITE)
     screen.blit(title_text, (WIDTH // 2 - title_text.get_width() // 2, HEIGHT // 3))
     screen.blit(instructions_text, (WIDTH // 2 - instructions_text.get_width() // 2, HEIGHT // 2))
     screen.blit(difficulty_text, (WIDTH // 2 - difficulty_text.get_width() // 2, HEIGHT // 2 + 40))
+    screen.blit(mode_text, (WIDTH // 2 - mode_text.get_width() // 2, HEIGHT // 2 + 80))
     pygame.display.flip()
 
 def pause_game():
@@ -96,6 +98,23 @@ def display_high_scores():
     pygame.display.flip()
     pygame.time.wait(3000)
 
+def move_obstacles():
+    for i in range(len(obstacles)):
+        direction = random.choice([(0, 1), (0, -1), (1, 0), (-1, 0)])
+        new_pos = (obstacles[i][0] + direction[0], obstacles[i][1] + direction[1])
+        if 0 <= new_pos[0] < GRID_WIDTH and 0 <= new_pos[1] < GRID_HEIGHT and new_pos not in obstacles:
+            obstacles[i] = new_pos
+
+def apply_power_up():
+    global direction, speed
+    power_up_type = random.choice(["slow", "fast", "reverse"])
+    if power_up_type == "slow":
+        speed = max(5, speed - 5)
+    elif power_up_type == "fast":
+        speed += 5
+    elif power_up_type == "reverse":
+        direction = (-direction[0], -direction[1])
+
 snake = init_snake()
 direction = (0, 0)
 food = random_food()
@@ -106,6 +125,8 @@ food_timer = 0
 obstacles = [(random.randint(0, GRID_WIDTH - 1), random.randint(0, GRID_HEIGHT - 1)) for _ in range(10)]
 food_types = ["normal", "super", "slow", "reverse"]
 current_food_type = "normal"
+game_mode = "classic"
+game_time = 60000  # 60 seconds for timed mode
 
 welcome_screen()
 waiting = True
@@ -122,6 +143,15 @@ while waiting:
                 speed = 10
             elif event.key == pygame.K_3:
                 speed = 15
+            elif event.key == pygame.K_1:
+                game_mode = "classic"
+            elif event.key == pygame.K_2:
+                game_mode = "timed"
+            elif event.key == pygame.K_3:
+                game_mode = "survival"
+
+if game_mode == "timed":
+    pygame.time.set_timer(pygame.USEREVENT, 1000)
 
 while True:
     for event in pygame.event.get():
@@ -140,6 +170,13 @@ while True:
                 pause_game()
             elif event.key == pygame.K_h:
                 display_high_scores()
+        elif event.type == pygame.USEREVENT:
+            if game_mode == "timed":
+                game_time -= 1000
+                if game_time <= 0:
+                    game_over()
+            elif game_mode == "survival":
+                move_obstacles()
 
     if direction != (0, 0):
         new_head = (snake[0][0] + direction[0], snake[0][1] + direction[1])
@@ -166,6 +203,8 @@ while True:
                 level += 1
                 speed += 2
                 obstacles.append((random.randint(0, GRID_WIDTH - 1), random.randint(0, GRID_HEIGHT - 1)))
+            if random.randint(0, 10) > 7:
+                apply_power_up()
         else:
             snake.pop()
 
@@ -189,8 +228,11 @@ while True:
         pygame.draw.rect(screen, GREY, pygame.Rect(food[0] * GRID_SIZE, food[1] * GRID_SIZE, GRID_SIZE, GRID_SIZE))
     score_text = font.render("Score: " + str(score), True, WHITE)
     level_text = font.render("Level: " + str(level), True, WHITE)
+    time_text = font.render("Time: " + str(game_time // 1000), True, WHITE) if game_mode == "timed" else None
     screen.blit(score_text, (5, 5))
     screen.blit(level_text, (5, 30))
+    if time_text:
+        screen.blit(time_text, (5, 55))
     pygame.display.flip()
 
     clock.tick(speed)
